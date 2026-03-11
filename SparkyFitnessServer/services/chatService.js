@@ -430,15 +430,16 @@ Example JSON output for "GENERATE_FOOD_OPTIONS:apple":
 `;
 
     const messagesForAI = [{ role: "system", content: systemPromptContent }];
-    // Add user messages
-    messagesForAI.push(...messages.filter((msg) => msg.role === "user")); // Assuming 'messages' from frontend only contains user messages
+    // Add conversation messages (user and assistant) for context, excluding any system messages
+    // from the client since we already set our own system prompt above
+    messagesForAI.push(...messages.filter((msg) => msg.role !== "system"));
 
-    // For Google AI
+    // For Google AI: clean up markdown formatting characters that may cause issues,
+    // but preserve the full prompt length so all instructions are passed through
     const cleanSystemPrompt = systemPromptContent
       .replace(/[^\w\s\-.,!?:;()\[\]{}'"]/g, " ")
       .replace(/\s+/g, " ")
-      .trim()
-      .substring(0, 1000);
+      .trim();
 
     switch (aiService.service_type) {
       case "openai":
@@ -528,6 +529,7 @@ Example JSON output for "GENERATE_FOOD_OPTIONS:apple":
       case "google":
         const googleBody = {
           contents: messagesForAI
+            .filter((msg) => msg.role !== "system") // Exclude system messages; they are sent via systemInstruction below
             .map((msg) => {
               const role = msg.role === "assistant" ? "model" : "user";
               let parts = [];
@@ -928,6 +930,7 @@ async function processFoodOptionsRequest(
       case "google":
         const googleBodyFoodOptions = {
           contents: messages
+            .filter((msg) => msg.role !== "system") // Exclude system messages; they are sent via systemInstruction below
             .map((msg) => {
               const role = msg.role === "assistant" ? "model" : "user";
               return {
@@ -945,8 +948,7 @@ async function processFoodOptionsRequest(
         const cleanSystemPromptFoodOptions = systemPrompt
           .replace(/[^\w\s\-.,!?:;()\[\]{}'"]/g, " ")
           .replace(/\s+/g, " ")
-          .trim()
-          .substring(0, 1000);
+          .trim();
 
         if (
           cleanSystemPromptFoodOptions &&
