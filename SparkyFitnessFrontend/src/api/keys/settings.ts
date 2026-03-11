@@ -31,3 +31,8 @@ export const preferencesKeys = {
   user: () => [...preferencesKeys.all, 'user'] as const,
   nutrients: () => [...preferencesKeys.all, 'nutrients'] as const,
 };
+
+export const telegramKeys = {
+  all: ['telegram'] as const,
+  status: () => [...telegramKeys.all, 'status'] as const,
+};

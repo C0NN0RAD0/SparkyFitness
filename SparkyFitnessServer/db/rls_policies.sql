@@ -72,7 +72,9 @@ BEGIN
     'user_custom_nutrients',
     'sleep_need_calculations',
     'daily_sleep_need',
-    'day_classification_cache'
+    'day_classification_cache',
+    'telegram_link_tokens',
+    'telegram_user_links'
   ]::text[])
   LOOP
     EXECUTE 'ALTER TABLE public.' || quote_ident(table_name) || ' ENABLE ROW LEVEL SECURITY;';
@@ -499,3 +501,7 @@ WITH CHECK (
 SELECT create_owner_policy('sleep_need_calculations');
 SELECT create_owner_policy('daily_sleep_need');
 SELECT create_owner_policy('day_classification_cache');
+
+-- Telegram integration tables
+SELECT create_owner_policy('telegram_link_tokens');
+SELECT create_owner_policy('telegram_user_links');
