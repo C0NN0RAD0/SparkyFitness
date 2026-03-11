@@ -29,7 +29,18 @@ function update_script() {
     exit
   fi
 
-  if check_for_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness"; then
+  # When SPARKYFITNESS_BRANCH is set, deploy directly from that branch instead of
+  # the latest GitHub release. This is intended for testing a PR or branch before
+  # it is merged and released.
+  local use_branch="${SPARKYFITNESS_BRANCH:-}"
+
+  # Validate branch name: only allow alphanumerics, hyphens, underscores, dots, and forward slashes
+  if [[ -n "$use_branch" && ! "$use_branch" =~ ^[a-zA-Z0-9/_.-]+$ ]]; then
+    msg_error "Invalid branch name: '${use_branch}'. Only alphanumerics, hyphens, underscores, dots, and slashes are allowed."
+    exit 1
+  fi
+
+  if [[ -n "$use_branch" ]] || check_for_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness"; then
     msg_info "Stopping Services"
     systemctl stop sparkyfitness-server nginx
     msg_ok "Stopped Services"
@@ -44,7 +55,22 @@ function update_script() {
     fi
     msg_ok "Backed up data"
 
-    CLEAN_INSTALL=1 fetch_and_deploy_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness" "tarball"
+    if [[ -n "$use_branch" ]]; then
+      msg_info "Downloading source from branch: ${use_branch}"
+      local branch_url="https://github.com/C0NN0RAD0/SparkyFitness/archive/refs/heads/${use_branch}.tar.gz"
+      if ! wget -q -O /tmp/sparkyfitness-branch.tar.gz "$branch_url"; then
+        msg_error "Failed to download branch '${use_branch}' from GitHub. Check the branch name and your network connection."
+        rm -f /tmp/sparkyfitness-branch.tar.gz
+        exit 1
+      fi
+      rm -rf /opt/sparkyfitness
+      mkdir -p /opt/sparkyfitness
+      tar -xzf /tmp/sparkyfitness-branch.tar.gz -C /opt/sparkyfitness --strip-components=1
+      rm -f /tmp/sparkyfitness-branch.tar.gz
+      msg_ok "Downloaded source from branch: ${use_branch}"
+    else
+      CLEAN_INSTALL=1 fetch_and_deploy_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness" "tarball"
+    fi
 
     PNPM_VERSION="$(jq -r '.packageManager | split("@")[1]' /opt/sparkyfitness/package.json)"
     NODE_VERSION="25" NODE_MODULE="pnpm@${PNPM_VERSION}" setup_nodejs
