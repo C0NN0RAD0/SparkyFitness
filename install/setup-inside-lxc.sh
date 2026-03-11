@@ -62,7 +62,10 @@ ENCRYPTION_KEY=$(openssl rand -hex 32)
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 
 # Create database and users
-sudo -u postgres psql << EOF
+# Handle both root and non-root execution
+if [ "$EUID" -eq 0 ]; then
+  # Running as root in container
+  sudo -u postgres psql << EOF
 CREATE DATABASE sparkyfitness_db;
 CREATE USER sparky WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
 CREATE USER sparky_app WITH ENCRYPTED PASSWORD '$APP_PASSWORD';
@@ -75,6 +78,22 @@ GRANT CREATE ON SCHEMA public TO sparky_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sparky_app;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sparky_app;
 EOF
+else
+  # Running as postgres user
+  psql << EOF
+CREATE DATABASE sparkyfitness_db;
+CREATE USER sparky WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
+CREATE USER sparky_app WITH ENCRYPTED PASSWORD '$APP_PASSWORD';
+ALTER DATABASE sparkyfitness_db OWNER TO sparky;
+GRANT ALL PRIVILEGES ON DATABASE sparkyfitness_db TO sparky;
+GRANT CONNECT ON DATABASE sparkyfitness_db TO sparky_app;
+\c sparkyfitness_db
+GRANT USAGE ON SCHEMA public TO sparky_app;
+GRANT CREATE ON SCHEMA public TO sparky_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sparky_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sparky_app;
+EOF
+fi
 
 echo "   ✅ PostgreSQL configured"
 
