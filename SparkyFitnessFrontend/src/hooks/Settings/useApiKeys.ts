@@ -2,16 +2,17 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { authClient } from '@/lib/auth-client';
 import { apiKeyKeys } from '@/api/keys/settings';
+import type { ApiKey } from 'better-auth/plugins';
 
 export const useApiKeysQuery = (userId?: string) => {
   const { t } = useTranslation();
 
   return useQuery({
     queryKey: apiKeyKeys.lists(),
-    queryFn: async () => {
+    queryFn: async (): Promise<ApiKey[]> => {
       const { data, error } = await authClient.apiKey.list();
       if (error) throw error;
-      return data || [];
+      return (data || []) as ApiKey[];
     },
     enabled: !!userId,
     meta: {
