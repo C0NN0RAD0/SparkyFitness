@@ -8,7 +8,11 @@ echo "✨ Updated: 2026-03-11 - Direct control over build process"
 echo "███████████████████████████████████████████████████████████"
 
 # Configuration
-CONTAINER_ID="sparkyfitness-$(date +%s)"
+# Use next available VM ID (find highest existing and add 1)
+CONTAINER_ID=$(pvesh get /cluster/resources | grep -oP '"vmid":\K[0-9]+' | sort -n | tail -1)
+CONTAINER_ID=$((CONTAINER_ID + 1))
+echo "Using Container ID: $CONTAINER_ID"
+
 CONTAINER_NAME="SparkyFitness"
 CONTAINER_HOSTNAME="sparkyfitness"
 CONTAINER_CORES=${CONTAINER_CORES:-2}
@@ -27,13 +31,24 @@ echo ""
 
 # Step 1: Create LXC container
 echo "🔧 Step 1: Creating LXC Container..."
-pct create $CONTAINER_ID debian-13-standard_13.1-1_amd64.tar.zst \
+# Find a suitable Debian template
+TEMPLATE=$(pveam list local | grep -i "debian-13" | head -1 | awk '{print $1}')
+
+if [ -z "$TEMPLATE" ]; then
+  echo "❌ No Debian 13 template found. Available templates:"
+  pveam list local
+  exit 1
+fi
+
+echo "   Using template: $TEMPLATE"
+pct create $CONTAINER_ID local:vztmpl/$TEMPLATE \
   -cores $CONTAINER_CORES \
   -memory $CONTAINER_RAM \
-  -storage $DATASTORE \
+  -swap 512 \
   -hostname $CONTAINER_HOSTNAME \
   -net0 name=eth0,bridge=vmbr0,gw=192.168.1.1,ip=dhcp \
-  -rootfs $DATASTORE:$CONTAINER_DISK
+  -rootfs $DATASTORE:$CONTAINER_DISK \
+  -unprivileged 1
 
 echo "✅ Container created (ID: $CONTAINER_ID)"
 
@@ -47,9 +62,22 @@ echo "✅ Container started"
 # Step 3: Get container IP
 echo ""
 echo "📡 Step 3: Waiting for network..."
-sleep 10
-CONTAINER_IP=$(pct exec $CONTAINER_ID ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d/ -f1)
-echo "✅ Container IP: $CONTAINER_IP"
+CONTAINER_IP=""
+for i in {1..30}; do
+  sleep 2
+  CONTAINER_IP=$(pct exec $CONTAINER_ID ip addr show eth0 2>/dev/null | grep -oP '(?<=inet\s)\d+\.\d+\.\d+\.\d+' | head -1)
+  if [ ! -z "$CONTAINER_IP" ]; then
+    break
+  fi
+  echo "   Attempt $i/30 - waiting for IP..."
+done
+
+if [ -z "$CONTAINER_IP" ]; then
+  echo "⚠️  Could not determine container IP automatically"
+  CONTAINER_IP="<container-ip>"
+else
+  echo "✅ Container IP: $CONTAINER_IP"
+fi
 
 # Step 4: Update and install dependencies
 echo ""
@@ -76,24 +104,45 @@ pct exec $CONTAINER_ID apt-get install -y postgresql postgresql-contrib
 # Step 8: Clone repository
 echo ""
 echo "📥 Step 8: Cloning SparkyFitness repository..."
-pct exec $CONTAINER_ID git clone https://github.com/C0NN0RAD0/SparkyFitness.git $APP_PATH
+for attempt in {1..3}; do
+  if pct exec $CONTAINER_ID git clone https://github.com/C0NN0RAD0/SparkyFitness.git $APP_PATH 2>&1; then
+    break
+  else
+    if [ $attempt -lt 3 ]; then
+      echo "⚠️  Attempt $attempt failed, retrying..."
+      sleep 10
+    else
+      echo "❌ Failed to clone repository after 3 attempts"
+      exit 1
+    fi
+  fi
+done
 
 # Step 9: **CRITICAL** Install monorepo dependencies BEFORE anything else
 echo ""
 echo "📦 Step 9: Installing monorepo dependencies (CRITICAL)..."
-pct exec $CONTAINER_ID bash -c "cd $APP_PATH && pnpm install --frozen-lockfile"
+if ! pct exec $CONTAINER_ID bash -c "cd $APP_PATH && pnpm install --frozen-lockfile"; then
+  echo "❌ Failed to install monorepo dependencies"
+  exit 1
+fi
 echo "✅ Monorepo dependencies installed - shared/ package ready"
 
 # Step 10: Build backend
 echo ""
 echo "🏗️  Step 10: Building SparkyFitness Backend..."
-pct exec $CONTAINER_ID bash -c "cd $APP_PATH/SparkyFitnessServer && pnpm run build"
+if ! pct exec $CONTAINER_ID bash -c "cd $APP_PATH/SparkyFitnessServer && pnpm run build"; then
+  echo "❌ Failed to build backend"
+  exit 1
+fi
 echo "✅ Backend built successfully"
 
 # Step 11: Build frontend
 echo ""
 echo "🎨 Step 11: Building SparkyFitness Frontend..."
-pct exec $CONTAINER_ID bash -c "cd $APP_PATH/SparkyFitnessFrontend && pnpm run build"
+if ! pct exec $CONTAINER_ID bash -c "cd $APP_PATH/SparkyFitnessFrontend && pnpm run build"; then
+  echo "❌ Failed to build frontend"
+  exit 1
+fi
 echo "✅ Frontend built successfully"
 
 # Step 12: Setup systemd service
