@@ -49,17 +49,21 @@ function update_script() {
     PNPM_VERSION="$(jq -r '.packageManager | split("@")[1]' /opt/sparkyfitness/package.json)"
     NODE_VERSION="25" NODE_MODULE="pnpm@${PNPM_VERSION}" setup_nodejs
 
-    msg_info "Updating Sparky Fitness Backend"
-    cd /opt/sparkyfitness/SparkyFitnessServer
-    $STD npm install
-    msg_ok "Updated Sparky Fitness Backend"
-
-    msg_info "Updating Sparky Fitness Frontend (Patience)"
-    cd /opt/sparkyfitness/SparkyFitnessFrontend
+    msg_info "Installing Sparky Fitness (monorepo root) - this may take several minutes"
+    cd /opt/sparkyfitness
     $STD pnpm install
+    msg_ok "Installed monorepo dependencies"
+
+    msg_info "Building Sparky Fitness Backend"
+    cd /opt/sparkyfitness/SparkyFitnessServer
+    $STD pnpm run build
+    msg_ok "Built Sparky Fitness Backend"
+
+    msg_info "Building Sparky Fitness Frontend (Patience)"
+    cd /opt/sparkyfitness/SparkyFitnessFrontend
     $STD pnpm run build
     cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
-    msg_ok "Updated Sparky Fitness Frontend"
+    msg_ok "Built Sparky Fitness Frontend"
 
     msg_info "Restoring data"
     cp -r /opt/sparkyfitness_backup/. /opt/sparkyfitness/SparkyFitnessServer/
@@ -74,8 +78,43 @@ function update_script() {
   exit
 }
 
+function install_sparkyfitness() {
+  if [[ ! -d /opt/sparkyfitness ]]; then
+    msg_error "SparkyFitness directory not found at /opt/sparkyfitness"
+    return 1
+  fi
+
+  msg_info "Installing SparkyFitness (monorepo workspace)"
+  
+  # Install root-level workspace dependencies (required for monorepo to work)
+  msg_info "Installing monorepo dependencies with pnpm (this may take several minutes)"
+  cd /opt/sparkyfitness
+  if pnpm install --frozen-lockfile; then
+    msg_ok "Installed monorepo dependencies"
+  else
+    msg_error "Failed to install monorepo dependencies"
+    return 1
+  fi
+  
+  # Build frontend
+  msg_info "Building SparkyFitness frontend (this may take a few minutes)"
+  cd /opt/sparkyfitness
+  if pnpm --filter sparkyfitnessfrontend run build; then
+    msg_ok "Built frontend successfully"
+    mkdir -p /var/www/sparkyfitness
+    cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
+    msg_ok "Deployed frontend"
+  else
+    msg_error "Frontend build failed"
+    return 1
+  fi
+  
+  msg_ok "SparkyFitness setup completed successfully"
+}
+
 start
 build_container
+install_sparkyfitness
 description
 
 msg_ok "Completed successfully!\n"
