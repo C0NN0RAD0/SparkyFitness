@@ -61,22 +61,24 @@ APP_PASSWORD=$(openssl rand -base64 16)
 ENCRYPTION_KEY=$(openssl rand -hex 32)
 BETTER_AUTH_SECRET=$(openssl rand -base64 32)
 
-# Create database and users
-# Use su to switch to postgres user (works in containers without sudo)
-su -l postgres -c "psql << 'PSQL_EOF'
+# Create SQL setup file
+cat > /tmp/sparkyfitness-db-setup.sql << 'SQL_EOF'
 CREATE DATABASE sparkyfitness_db;
-CREATE USER sparky WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
-CREATE USER sparky_app WITH ENCRYPTED PASSWORD '$APP_PASSWORD';
+CREATE USER sparky WITH ENCRYPTED PASSWORD '%DB_PASSWORD%';
+CREATE USER sparky_app WITH ENCRYPTED PASSWORD '%APP_PASSWORD%';
 ALTER DATABASE sparkyfitness_db OWNER TO sparky;
 GRANT ALL PRIVILEGES ON DATABASE sparkyfitness_db TO sparky;
-GRANT CONNECT ON DATABASE sparkyfitness_db TO sparky_app;
-\c sparkyfitness_db
-GRANT USAGE ON SCHEMA public TO sparky_app;
-GRANT CREATE ON SCHEMA public TO sparky_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sparky_app;
-ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sparky_app;
-PSQL_EOF
-"
+SQL_EOF
+
+# Replace placeholders
+sed -i "s|%DB_PASSWORD%|$DB_PASSWORD|g" /tmp/sparkyfitness-db-setup.sql
+sed -i "s|%APP_PASSWORD%|$APP_PASSWORD|g" /tmp/sparkyfitness-db-setup.sql
+
+# Execute as postgres user
+su -l postgres -c "psql -f /tmp/sparkyfitness-db-setup.sql" 2>/dev/null
+
+# Cleanup
+rm -f /tmp/sparkyfitness-db-setup.sql
 
 echo "   ✅ PostgreSQL configured"
 
