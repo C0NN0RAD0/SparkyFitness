@@ -8,9 +8,19 @@ echo "✨ Updated: 2026-03-11 - Direct control over build process"
 echo "███████████████████████████████████████████████████████████"
 
 # Configuration
-# Use next available VM ID (find highest existing and add 1)
-CONTAINER_ID=$(pvesh get /cluster/resources | grep -oP '"vmid":\K[0-9]+' | sort -n | tail -1)
-CONTAINER_ID=$((CONTAINER_ID + 1))
+# Use numeric VM ID in range 100-999 (skip if already in use)
+for id in {100..999}; do
+  if ! pct status $id >/dev/null 2>&1; then
+    CONTAINER_ID=$id
+    break
+  fi
+done
+
+if [ -z "$CONTAINER_ID" ]; then
+  echo "❌ Could not find available container ID"
+  exit 1
+fi
+
 echo "Using Container ID: $CONTAINER_ID"
 
 CONTAINER_NAME="SparkyFitness"
