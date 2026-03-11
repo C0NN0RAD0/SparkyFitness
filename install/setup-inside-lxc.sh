@@ -50,15 +50,78 @@ cd $APP_PATH
 pnpm --filter sparkyfitnessfrontend run build
 echo "   ✅ Frontend built successfully"
 
-# Step 8: Deploy frontend to web directory
-echo "🚀 Step 8: Deploying frontend to nginx..."
+# Step 8: Setup PostgreSQL database and users
+echo "🗄️  Step 8: Setting up PostgreSQL database..."
+systemctl start postgresql
+sleep 2
+
+# Generate secure passwords
+DB_PASSWORD=$(openssl rand -base64 16)
+APP_PASSWORD=$(openssl rand -base64 16)
+ENCRYPTION_KEY=$(openssl rand -hex 32)
+BETTER_AUTH_SECRET=$(openssl rand -base64 32)
+
+# Create database and users
+sudo -u postgres psql << EOF
+CREATE DATABASE sparkyfitness_db;
+CREATE USER sparky WITH ENCRYPTED PASSWORD '$DB_PASSWORD';
+CREATE USER sparky_app WITH ENCRYPTED PASSWORD '$APP_PASSWORD';
+ALTER DATABASE sparkyfitness_db OWNER TO sparky;
+GRANT ALL PRIVILEGES ON DATABASE sparkyfitness_db TO sparky;
+GRANT CONNECT ON DATABASE sparkyfitness_db TO sparky_app;
+\c sparkyfitness_db
+GRANT USAGE ON SCHEMA public TO sparky_app;
+GRANT CREATE ON SCHEMA public TO sparky_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO sparky_app;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO sparky_app;
+EOF
+
+echo "   ✅ PostgreSQL configured"
+
+# Step 9: Create .env file
+echo "📝 Step 9: Creating .env configuration..."
+cat > $APP_PATH/.env << EOF
+# SparkyFitness Configuration - Auto-generated $(date +%Y-%m-%d)
+
+# Database Configuration
+SPARKY_FITNESS_DB_HOST=localhost
+SPARKY_FITNESS_DB_PORT=5432
+SPARKY_FITNESS_DB_NAME=sparkyfitness_db
+SPARKY_FITNESS_DB_USER=sparky
+SPARKY_FITNESS_DB_PASSWORD=$DB_PASSWORD
+SPARKY_FITNESS_APP_DB_USER=sparky_app
+SPARKY_FITNESS_APP_DB_PASSWORD=$APP_PASSWORD
+
+# Server Configuration
+SPARKY_FITNESS_SERVER_HOST=localhost
+SPARKY_FITNESS_SERVER_PORT=3010
+SPARKY_FITNESS_FRONTEND_URL=http://localhost
+
+# Security Configuration
+SPARKY_FITNESS_API_ENCRYPTION_KEY=$ENCRYPTION_KEY
+BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET
+
+# Environment Settings
+NODE_ENV=production
+SPARKY_FITNESS_LOG_LEVEL=INFO
+TZ=Etc/UTC
+
+# Optional Settings
+SPARKY_FITNESS_DISABLE_SIGNUP=false
+SPARKY_FITNESS_FORCE_EMAIL_LOGIN=true
+EOF
+
+echo "   ✅ .env file created at $APP_PATH/.env"
+
+# Step 10: Deploy frontend to web directory
+echo "🚀 Step 10: Deploying frontend to nginx..."
 mkdir -p /var/www/sparkyfitness
 rm -rf /var/www/sparkyfitness/*
 cp -a $APP_PATH/SparkyFitnessFrontend/dist/* /var/www/sparkyfitness/
 echo "   ✅ Frontend deployed"
 
-# Step 9: Configure nginx reverse proxy
-echo "🌐 Step 9: Configuring nginx..."
+# Step 11: Configure nginx reverse proxy
+echo "🌐 Step 11: Configuring nginx..."
 cat > /etc/nginx/sites-available/sparkyfitness << 'EOF'
 server {
     listen 80;
@@ -87,8 +150,8 @@ nginx -t
 systemctl restart nginx
 echo "   ✅ Nginx configured"
 
-# Step 10: Create systemd service for backend
-echo "⚙️  Step 10: Installing systemd service..."
+# Step 12: Create systemd service for backend
+echo "⚙️  Step 12: Installing systemd service..."
 cat > /etc/systemd/system/sparkyfitness-server.service << 'EOF'
 [Unit]
 Description=SparkyFitness Backend Server
@@ -113,8 +176,8 @@ systemctl daemon-reload
 systemctl enable sparkyfitness-server
 echo "   ✅ Service created"
 
-# Step 11: Start all services
-echo "▶️  Step 11: Starting services..."
+# Step 13: Start all services
+echo "▶️  Step 13: Starting services..."
 systemctl restart postgresql
 systemctl restart nginx
 systemctl start sparkyfitness-server
@@ -125,6 +188,8 @@ echo "████████████████████████�
 echo "✨ SparkyFitness Setup Complete!"
 echo "███████████████████████████████████████████████████████████"
 echo ""
+echo "✅ PostgreSQL: Database and users created"
+echo "✅ Configuration: .env file created at $APP_PATH/.env"
 echo "✅ Frontend: Built and deployed to /var/www/sparkyfitness"
 echo "✅ Backend: Systemd service installed (sparkyfitness-server)"
 echo "✅ Nginx: Reverse proxy configured on port 80"
@@ -132,10 +197,19 @@ echo ""
 echo "🌐 Access your application:"
 echo "   Web UI: http://<container-ip>"
 echo ""
-echo "📝 Next steps:"
-echo "   1. Edit /opt/sparkyfitness/.env with configuration"
-echo "   2. Setup PostgreSQL database and user"
-echo "   3. Configure AI service settings in the web UI"
+echo "📋 Configuration Details:"
+echo "   Database: sparkyfitness_db"
+echo "   DB User (admin): sparky"
+echo "   App User: sparky_app"
+echo "   Config file: $APP_PATH/.env"
+echo ""
+echo "📝 The .env file has been auto-generated with:"
+echo "   • Generated encryption keys (SPARKY_FITNESS_API_ENCRYPTION_KEY)"
+echo "   • Generated auth secret (BETTER_AUTH_SECRET)"
+echo "   • Database credentials (safe for production)"
+echo ""
+echo "   If you need to modify CORS or other settings, edit:"
+echo "   nano $APP_PATH/.env"
 echo ""
 echo "📊 View backend logs:"
 echo "   journalctl -u sparkyfitness-server -f"
