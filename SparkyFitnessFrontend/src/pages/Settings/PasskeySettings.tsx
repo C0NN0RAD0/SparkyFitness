@@ -17,6 +17,7 @@ import {
   useDeletePasskeyMutation,
   usePasskeys,
 } from '@/hooks/Settings/usePasskeys';
+import type { Passkey } from '@better-auth/passkey';
 
 const PasskeySettings = () => {
   const { t } = useTranslation();
@@ -101,7 +102,7 @@ const PasskeySettings = () => {
               </p>
             ) : (
               <div className="divide-y border rounded-md">
-                {passkeys.map((pk) => (
+                {passkeys.map((pk: Passkey) => (
                   <div
                     key={pk.id}
                     className="flex items-center justify-between p-3"

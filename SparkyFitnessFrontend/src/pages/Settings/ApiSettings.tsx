@@ -29,6 +29,7 @@ import {
   useToggleApiKeyMutation,
   useCleanupApiKeysMutation,
 } from '@/hooks/Settings/useApiKeys';
+import type { ApiKey } from 'better-auth/plugins';
 
 export const ApiSettings = () => {
   const { t } = useTranslation();
@@ -274,7 +275,7 @@ export const ApiSettings = () => {
               )}
             </p>
           ) : (
-            apiKeys.map((key) => (
+            apiKeys.map((key: ApiKey) => (
               <div
                 key={key.id}
                 className={`flex items-center space-x-4 p-3 border rounded-md ${!key.enabled ? 'bg-muted/50 opacity-80' : ''}`}

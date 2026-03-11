@@ -25,7 +25,8 @@
 
     "paths": {
       "@/*": ["./src/*"],
-      "@workspace/shared": ["../shared/src/index.ts"]
+      "@workspace/shared": ["../shared/src/index.ts"],
+      "zod": ["./node_modules/zod", "../node_modules/zod"]
     }
   },
   "include": ["src", "src/types/**/*.d.ts", "../shared/src"]
