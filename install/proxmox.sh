@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+echo "███████████████████████████████████████████████████████████"
+echo "🎯 SparkyFitness v2.0 Installation Script (Monorepo Support)"
+echo "✨ Updated: 2026-03-11 - Proper pnpm workspace handling"
+echo "███████████████████████████████████████████████████████████"
+
 source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/build.func)
 # Copyright (c) 2021-2026 community-scripts ORG
 # Author: Tom Frenzel (tomfrenzel)
@@ -19,22 +24,28 @@ variables
 color
 catch_errors
 
-function install() {
-  msg_info "🎯 Installing SparkyFitness (v2.0 - Monorepo Build System)"
-  msg_info "✨ This is the UPDATED installation script with proper monorepo support"
+function install_settings() {
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "🎯 SparkyFitness Installation Starting (v2.0 with Monorepo)"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   
-  # Install root-level workspace dependencies FIRST (required for monorepo to work with shared/)
-  msg_info "Installing monorepo dependencies with pnpm - this may take several minutes"
+  # Install root-level workspace dependencies FIRST (monorepo requirement)
+  echo "📦 Installing monorepo dependencies with pnpm..."
   cd /opt/sparkyfitness
-  pnpm install --frozen-lockfile
+  pnpm install --frozen-lockfile || exit 1
+  echo "✅ Monorepo dependencies installed"
   
-  # Build frontend with proper monorepo context
-  msg_info "Building SparkyFitness frontend"
+  # Build frontend
+  echo "🏗️  Building SparkyFitness frontend..."
   cd /opt/sparkyfitness
-  pnpm --filter sparkyfitnessfrontend run build
+  pnpm --filter sparkyfitnessfrontend run build || exit 1
   mkdir -p /var/www/sparkyfitness
-  cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
-  msg_ok "SparkyFitness installed successfully"
+  cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/ || exit 1
+  echo "✅ Frontend built and deployed"
+  
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  echo "✨ SparkyFitness v2.0 installation complete!"
+  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
 function update_script() {
@@ -48,8 +59,9 @@ function update_script() {
   fi
 
   if check_for_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness"; then
-    msg_info "🎯 UPDATING SparkyFitness (v2.0 - Monorepo Build System)"
-    msg_info "✨ Using UPDATED update script with proper monorepo support"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "🎯 SparkyFitness Update (v2.0 with Monorepo Support)"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     msg_info "Stopping Services"
     systemctl stop sparkyfitness-server nginx
     msg_ok "Stopped Services"
@@ -89,6 +101,9 @@ function update_script() {
     $STD systemctl start sparkyfitness-server nginx
     msg_ok "Started Services"
     msg_ok "Updated successfully!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "✨ SparkyFitness v2.0 update complete!"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   fi
   exit
 }
