@@ -28,6 +28,10 @@ apt-get install -y nodejs
 echo "⚡ Step 4: Installing pnpm package manager..."
 npm install -g pnpm@10.30.3
 
+# Step 4b: Install tsx globally (needed for TypeScript execution)
+echo "🔧 Step 4b: Installing tsx (TypeScript executor)..."
+npm install -g tsx
+
 # Step 5: Clone SparkyFitness repository
 echo "📥 Step 5: Cloning SparkyFitness repository..."
 if [ -d "$APP_PATH" ]; then
@@ -166,7 +170,7 @@ Wants=postgresql.service
 Type=simple
 User=root
 WorkingDirectory=/opt/sparkyfitness/SparkyFitnessServer
-ExecStart=/usr/bin/node SparkyFitnessServer.js
+ExecStart=/usr/local/bin/tsx SparkyFitnessServer.js
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
