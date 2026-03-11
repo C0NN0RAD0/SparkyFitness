@@ -81,6 +81,11 @@ sed -i "s|%APP_PASSWORD%|$APP_PASSWORD|g" /tmp/sparkyfitness-db-setup.sql
 # Execute as postgres user
 su -l postgres -c "psql -f /tmp/sparkyfitness-db-setup.sql" 2>/dev/null
 
+# Pre-create extensions as superuser (required for migrations)
+su -l postgres -c "psql -d sparkyfitness_db -c 'CREATE EXTENSION IF NOT EXISTS pg_stat_statements;'" 2>/dev/null
+su -l postgres -c "psql -d sparkyfitness_db -c 'CREATE EXTENSION IF NOT EXISTS uuid-ossp;'" 2>/dev/null
+su -l postgres -c "psql -d sparkyfitness_db -c 'CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";'" 2>/dev/null
+
 # Cleanup
 rm -f /tmp/sparkyfitness-db-setup.sql
 
