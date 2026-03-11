@@ -24,28 +24,17 @@ variables
 color
 catch_errors
 
-function install_settings() {
+function install() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "🎯 SparkyFitness Installation Starting (v2.0 with Monorepo)"
+  echo "🎯 SparkyFitness Installation (v2.0 with Monorepo Support)"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   
-  # Install root-level workspace dependencies FIRST (monorepo requirement)
-  echo "📦 Installing monorepo dependencies with pnpm..."
+  # CRITICAL: Install root monorepo dependencies FIRST before any builds
+  echo "📦 Installing worksp dependencies (shared/, SparkyFitnessServer/, etc)..."
   cd /opt/sparkyfitness
-  pnpm install --frozen-lockfile || exit 1
-  echo "✅ Monorepo dependencies installed"
-  
-  # Build frontend
-  echo "🏗️  Building SparkyFitness frontend..."
-  cd /opt/sparkyfitness
-  pnpm --filter sparkyfitnessfrontend run build || exit 1
-  mkdir -p /var/www/sparkyfitness
-  cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/ || exit 1
-  echo "✅ Frontend built and deployed"
-  
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  echo "✨ SparkyFitness v2.0 installation complete!"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  pnpm install --frozen-lockfile || { echo "❌ Failed to install monorepo dependencies"; exit 1; }
+  echo "✅ Monorepo dependencies ready"
+  echo ""
 }
 
 function update_script() {
@@ -109,6 +98,7 @@ function update_script() {
 }
 
 start
+
 build_container
 description
 
