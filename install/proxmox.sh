@@ -19,6 +19,24 @@ variables
 color
 catch_errors
 
+function install() {
+  msg_info "🎯 Installing SparkyFitness (v2.0 - Monorepo Build System)"
+  msg_info "✨ This is the UPDATED installation script with proper monorepo support"
+  
+  # Install root-level workspace dependencies FIRST (required for monorepo to work with shared/)
+  msg_info "Installing monorepo dependencies with pnpm - this may take several minutes"
+  cd /opt/sparkyfitness
+  pnpm install --frozen-lockfile
+  
+  # Build frontend with proper monorepo context
+  msg_info "Building SparkyFitness frontend"
+  cd /opt/sparkyfitness
+  pnpm --filter sparkyfitnessfrontend run build
+  mkdir -p /var/www/sparkyfitness
+  cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
+  msg_ok "SparkyFitness installed successfully"
+}
+
 function update_script() {
   header_info
   check_container_storage
@@ -30,6 +48,8 @@ function update_script() {
   fi
 
   if check_for_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness"; then
+    msg_info "🎯 UPDATING SparkyFitness (v2.0 - Monorepo Build System)"
+    msg_info "✨ Using UPDATED update script with proper monorepo support"
     msg_info "Stopping Services"
     systemctl stop sparkyfitness-server nginx
     msg_ok "Stopped Services"
@@ -49,17 +69,16 @@ function update_script() {
     PNPM_VERSION="$(jq -r '.packageManager | split("@")[1]' /opt/sparkyfitness/package.json)"
     NODE_VERSION="25" NODE_MODULE="pnpm@${PNPM_VERSION}" setup_nodejs
 
-    msg_info "Updating Sparky Fitness Backend"
-    cd /opt/sparkyfitness/SparkyFitnessServer
-    $STD npm install
-    msg_ok "Updated Sparky Fitness Backend"
-
-    msg_info "Updating Sparky Fitness Frontend (Patience)"
+    msg_info "Installing Sparky Fitness (monorepo root) - this may take several minutes"
     cd /opt/sparkyfitness
-    $STD pnpm install
+    $STD pnpm install --frozen-lockfile
+    msg_ok "Installed monorepo dependencies"
+
+    msg_info "Building Sparky Fitness Frontend (Patience)"
+    cd /opt/sparkyfitness
     $STD pnpm --filter sparkyfitnessfrontend run build
     cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
-    msg_ok "Updated Sparky Fitness Frontend"
+    msg_ok "Built Sparky Fitness Frontend"
 
     msg_info "Restoring data"
     cp -r /opt/sparkyfitness_backup/. /opt/sparkyfitness/SparkyFitnessServer/
