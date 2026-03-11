@@ -19,6 +19,24 @@ variables
 color
 catch_errors
 
+function install() {
+  msg_info "🎯 Installing SparkyFitness (v2.0 - Monorepo Build System)"
+  msg_info "✨ This is the UPDATED installation script with proper monorepo support"
+  
+  # Install root-level workspace dependencies FIRST (required for monorepo to work with shared/)
+  msg_info "Installing monorepo dependencies with pnpm - this may take several minutes"
+  cd /opt/sparkyfitness
+  pnpm install --frozen-lockfile
+  
+  # Build frontend with proper monorepo context
+  msg_info "Building SparkyFitness frontend"
+  cd /opt/sparkyfitness
+  pnpm --filter sparkyfitnessfrontend run build
+  mkdir -p /var/www/sparkyfitness
+  cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
+  msg_ok "SparkyFitness installed successfully"
+}
+
 function update_script() {
   header_info
   check_container_storage
@@ -30,6 +48,8 @@ function update_script() {
   fi
 
   if check_for_gh_release "sparkyfitness" "C0NN0RAD0/SparkyFitness"; then
+    msg_info "🎯 UPDATING SparkyFitness (v2.0 - Monorepo Build System)"
+    msg_info "✨ Using UPDATED update script with proper monorepo support"
     msg_info "Stopping Services"
     systemctl stop sparkyfitness-server nginx
     msg_ok "Stopped Services"
@@ -51,17 +71,12 @@ function update_script() {
 
     msg_info "Installing Sparky Fitness (monorepo root) - this may take several minutes"
     cd /opt/sparkyfitness
-    $STD pnpm install
+    $STD pnpm install --frozen-lockfile
     msg_ok "Installed monorepo dependencies"
 
-    msg_info "Building Sparky Fitness Backend"
-    cd /opt/sparkyfitness/SparkyFitnessServer
-    $STD pnpm run build
-    msg_ok "Built Sparky Fitness Backend"
-
     msg_info "Building Sparky Fitness Frontend (Patience)"
-    cd /opt/sparkyfitness/SparkyFitnessFrontend
-    $STD pnpm run build
+    cd /opt/sparkyfitness
+    $STD pnpm --filter sparkyfitnessfrontend run build
     cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
     msg_ok "Built Sparky Fitness Frontend"
 
@@ -78,43 +93,8 @@ function update_script() {
   exit
 }
 
-function install_sparkyfitness() {
-  if [[ ! -d /opt/sparkyfitness ]]; then
-    msg_error "SparkyFitness directory not found at /opt/sparkyfitness"
-    return 1
-  fi
-
-  msg_info "Installing SparkyFitness (monorepo workspace)"
-  
-  # Install root-level workspace dependencies (required for monorepo to work)
-  msg_info "Installing monorepo dependencies with pnpm (this may take several minutes)"
-  cd /opt/sparkyfitness
-  if pnpm install --frozen-lockfile; then
-    msg_ok "Installed monorepo dependencies"
-  else
-    msg_error "Failed to install monorepo dependencies"
-    return 1
-  fi
-  
-  # Build frontend
-  msg_info "Building SparkyFitness frontend (this may take a few minutes)"
-  cd /opt/sparkyfitness
-  if pnpm --filter sparkyfitnessfrontend run build; then
-    msg_ok "Built frontend successfully"
-    mkdir -p /var/www/sparkyfitness
-    cp -a /opt/sparkyfitness/SparkyFitnessFrontend/dist/. /var/www/sparkyfitness/
-    msg_ok "Deployed frontend"
-  else
-    msg_error "Frontend build failed"
-    return 1
-  fi
-  
-  msg_ok "SparkyFitness setup completed successfully"
-}
-
 start
 build_container
-install_sparkyfitness
 description
 
 msg_ok "Completed successfully!\n"
