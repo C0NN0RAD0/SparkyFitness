@@ -39,23 +39,18 @@ echo "📦 Step 6: Installing monorepo dependencies..."
 cd $APP_PATH
 pnpm install --frozen-lockfile
 
-# Step 7: Build backend
-echo "🏗️  Step 7: Building backend..."
-cd $APP_PATH/SparkyFitnessServer
-pnpm run build
+# Step 7: Build frontend
+echo "🎨 Step 7: Building frontend..."
+cd $APP_PATH
+pnpm --filter sparkyfitnessfrontend run build
 
-# Step 8: Build frontend
-echo "🎨 Step 8: Building frontend..."
-cd $APP_PATH/SparkyFitnessFrontend
-pnpm run build
-
-# Step 9: Deploy frontend
-echo "🚀 Step 9: Deploying frontend..."
+# Step 8: Deploy frontend
+echo "🚀 Step 8: Deploying frontend..."
 mkdir -p /var/www/sparkyfitness
 cp -a $APP_PATH/SparkyFitnessFrontend/dist/* /var/www/sparkyfitness/
 
-# Step 10: Setup nginx
-echo "🌐 Step 10: Configuring nginx..."
+# Step 9: Setup nginx
+echo "🌐 Step 9: Configuring nginx..."
 cat > /etc/nginx/sites-available/sparkyfitness << 'EOF'
 server {
     listen 80;
@@ -83,8 +78,8 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl restart nginx
 
-# Step 11: Setup systemd service
-echo "⚙️  Step 11: Installing systemd service..."
+# Step 10: Setup systemd service
+echo "⚙️  Step 10: Installing systemd service..."
 cat > /etc/systemd/system/sparkyfitness-server.service << 'EOF'
 [Unit]
 Description=SparkyFitness Backend Server
@@ -107,8 +102,8 @@ systemctl daemon-reload
 systemctl enable sparkyfitness-server
 systemctl restart sparkyfitness-server
 
-# Step 12: Start services
-echo "▶️  Step 12: Starting services..."
+# Step 11: Start services
+echo "▶️  Step 11: Starting services..."
 systemctl restart postgresql
 systemctl restart nginx
 
