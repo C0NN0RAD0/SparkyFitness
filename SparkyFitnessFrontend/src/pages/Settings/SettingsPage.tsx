@@ -28,6 +28,7 @@ import CustomNutrientsSettings from '@/pages/Settings/CustomNutrientsSettings';
 import { DeveloperResources } from './DevloperResources';
 import { AccountSecurity } from './AccountSecurity';
 import { ApiSettings } from './ApiSettings';
+import { TelegramSettings } from './TelegramSettings';
 import { WaterTrackingSettings } from './WaterTrackingSettings';
 import { PreferenceSettings } from './PreferenceSettings';
 import { ProfileInformation } from './ProfileInformation';
@@ -220,6 +221,8 @@ const Settings = () => {
         </AccordionItem>
 
         <ApiSettings />
+
+        <TelegramSettings />
 
         <DeveloperResources />
 

@@ -367,6 +367,7 @@ app.use("/api/review", reviewRoutes);
 app.use("/api/custom-nutrients", customNutrientRoutes);
 app.use("/api/adaptive-tdee", adaptiveTdeeRoutes);
 app.use("/api/meal-types", mealTypeRoutes);
+app.use("/api/telegram", require("./routes/telegramRoutes"));
 
 // Swagger
 app.use(
@@ -541,6 +542,10 @@ applyMigrations()
     scheduleFitbitSyncs();
     schedulePolarSyncs();
     scheduleStravaSyncs();
+
+    // Start Telegram bot if configured
+    const telegramBotService = require("./services/telegramBotService");
+    telegramBotService.start();
 
     if (process.env.SPARKY_FITNESS_ADMIN_EMAIL) {
       const userRepository = require("./models/userRepository");
